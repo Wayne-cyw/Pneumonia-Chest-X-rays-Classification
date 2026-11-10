@@ -1,0 +1,16 @@
+seed = 211
+human subset size = 40
+
+train: 5216 images, NORMAL 1341, PNEUMONIA 3875 (74.3% pneumonia)
+val: 16 images, NORMAL 8, PNEUMONIA 8 (50.0% pneumonia)
+test: 624 images, NORMAL 234, PNEUMONIA 390 (62.5% pneumonia)
+test PNEUMONIA subtypes: {'bacteria': 242, 'virus': 148}
+
+human subset: 40 images, 28 Positive, 12 Negative (70.0% Positive); pneumonia subtypes {'bacteria': 19, 'virus': 9}
+
+exact duplicate images, train & test: 0
+exact duplicate images, train & val:  0
+exact duplicate images, val & test:   0
+patient IDs shared by train & test: 0
+patient IDs shared by train & val:  0
+patient IDs shared by val & test:   0
