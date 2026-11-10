@@ -1,7 +1,7 @@
 """Choose the thresholds and the voting rule for symbolic.py using TRAINING data only.
 
-Uses approaches/2_symbolic/train_features.csv from explore_features.py: the "dev" part sets the thresholds,
-the "val" part (different patients, also from the training folder) checks them.
+Uses approaches/2_symbolic/train_features.csv from explore_features.py: the "train" part sets the thresholds,
+the "val" part (different patients, also from the training data) checks them.
 The test set is not read.
 
 Three features vote; each votes "Positive" (pneumonia) when it is on the pneumonia side of its threshold:
@@ -9,8 +9,8 @@ Three features vote; each votes "Positive" (pneumonia) when it is on the pneumon
     lung_detail < threshold  (less fine rib/vessel contrast)
     lung_mean   > threshold  (brighter lungs)
 Two ways of setting each threshold are compared:
-    midpoint : halfway between the NORMAL median and the PNEUMONIA median on dev (easy to state by hand)
-    balanced : the cut that maximises balanced accuracy on dev (ignores the class imbalance)
+    midpoint : halfway between the NORMAL median and the PNEUMONIA median on train (easy to state by hand)
+    balanced : the cut that maximises balanced accuracy on train (ignores the class imbalance)
 """
 import itertools
 import sys
@@ -58,7 +58,7 @@ def balanced_threshold(x, y, sign):
 
 if __name__ == "__main__":
     rows = load_cache()
-    dev = [r for r in rows if r["part"] == "dev"]; val = [r for r in rows if r["part"] == "val"]
+    dev = [r for r in rows if r["part"] == "train"]; val = [r for r in rows if r["part"] == "val"]
     y_dev = np.array([r["label"] for r in dev]); y_val = np.array([r["label"] for r in val])
     for method in ("midpoint", "balanced"):
         thr = {}
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         print(f"\n=== thresholds: {method} (rounded to 2 decimals) ===")
         print(thr)
         for k in (1, 2, 3):
-            for name, part, y in (("dev", dev, y_dev), ("val", val, y_val)):
+            for name, part, y in (("train", dev, y_dev), ("val", val, y_val)):
                 m = metrics(y, (votes(part, thr) >= k).astype(int))
                 print(f"  >= {k} of 3 votes  {name}: F1 {m['F1']:.3f}  recall {m['recall']:.3f}  "
                       f"spec {m['specificity']:.3f}  bal_acc {m['bal_acc']:.3f}  acc {m['acc']:.3f}  "

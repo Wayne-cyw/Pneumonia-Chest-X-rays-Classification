@@ -1,16 +1,24 @@
-seed = 211
-human subset size = 40
+seed = 211 (Example IDs), split seed = 211 (train/val, fold 0 of 5)
 
-train: 5216 images, NORMAL 1341, PNEUMONIA 3875 (74.3% pneumonia)
-val: 16 images, NORMAL 8, PNEUMONIA 8 (50.0% pneumonia)
-test: 624 images, NORMAL 234, PNEUMONIA 390 (62.5% pneumonia)
-test PNEUMONIA subtypes: {'bacteria': 242, 'virus': 148}
+Dataset folders as downloaded
+  train: 5216 images, NORMAL 1341, PNEUMONIA 3875 (74.3% pneumonia)
+  val: 16 images, NORMAL 8, PNEUMONIA 8 (50.0% pneumonia)
+  test: 624 images, NORMAL 234, PNEUMONIA 390 (62.5% pneumonia)
+  test PNEUMONIA subtypes: {'virus': 148, 'bacteria': 242}
 
-human subset: 40 images, 28 Positive, 12 Negative (70.0% Positive); pneumonia subtypes {'bacteria': 19, 'virus': 9}
+Project split (image_index.csv, column `split`)
+  train: 4185 images, NORMAL 1079, PNEUMONIA 3106 (74.2% pneumonia), 1313 pneumonia patients
+  val: 1047 images, NORMAL 270, PNEUMONIA 777 (74.2% pneumonia), 329 pneumonia patients
+  test: 624 images, NORMAL 234, PNEUMONIA 390 (62.5% pneumonia), 202 pneumonia patients
 
-exact duplicate images, train & test: 0
-exact duplicate images, train & val:  0
-exact duplicate images, val & test:   0
-patient IDs shared by train & test: 0
-patient IDs shared by train & val:  0
-patient IDs shared by val & test:   0
+Exact duplicate images between dataset folders
+  train & test: 0
+  train & val: 0
+  val & test: 0
+
+Pneumonia patient IDs shared between splits (normal files have no patient ID, so they cannot be checked)
+  project train & val: 0 (asserted above)
+  dataset train folder & test folder: 170
+  dataset train folder & val folder: 0
+  dataset val folder & test folder: 0
+  (a shared ID may be the same child or two children with the same number; file names cannot tell)

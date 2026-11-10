@@ -1,4 +1,4 @@
-"""Run symbolic.py ONCE on the full test set and write eval/predictions/symbolic_eval.csv (Lab 3, Part 4).
+"""Run symbolic.py ONCE on the full test set and write eval/predictions/symbolic_eval.csv.
 
 Do not change the rule after seeing test results. Requires --confirm so it is never run by accident.
 

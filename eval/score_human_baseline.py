@@ -1,7 +1,7 @@
 """Score eval/human_baseline.csv against eval/ground_truth.csv.
 
 Run this only AFTER you have finished labelling and exported the CSV
-(Lab 2: don't compare against ground truth before the baseline is final).
+(Do not compare against ground truth before the baseline is final.)
 """
 import csv
 import sys

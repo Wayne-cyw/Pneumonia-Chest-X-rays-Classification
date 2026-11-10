@@ -8,3 +8,6 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Raw dataset (download it yourself, see README)
+data/raw/

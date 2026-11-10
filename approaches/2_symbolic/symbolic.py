@@ -85,5 +85,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         sample = Path(sys.argv[1])
     else:
-        sample = sorted((PROJECT / "data" / "sample").glob("*.jp*g"))[0]
+        sample = sorted((PROJECT / "approaches" / "2_symbolic" / "sample").glob("*.jp*g"))[0]
     print(f"{sample.name}: {predict(sample)}")

@@ -1,13 +1,12 @@
-"""Measure the candidate features of symbolic.py on the TRAINING set only.
+"""Measure the candidate features of symbolic.py on the TRAINING data only.
 
-The training images are split by patient into a development part (rule design) and a
-validation part (a check on images the rule was not tuned on). The test set is never read.
+Uses the project split in data/image_index.csv (column `split`): the `train` part is for rule design and
+the `val` part is a check on images the rule was not tuned on. The test set is never read.
 
 Run from the project folder:  python approaches/2_symbolic/explore_features.py
 Writes approaches/2_symbolic/train_features.csv (cache) and prints how well each feature separates the classes.
 """
 import csv
-import random
 import sys
 from pathlib import Path
 
@@ -16,33 +15,26 @@ from sklearn.metrics import roc_auc_score  # used only to measure a feature, not
 
 PROJECT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT / "approaches" / "2_symbolic"))
-sys.path.insert(0, str(PROJECT / "data"))
 import symbolic  # noqa: E402
-from prepare_data import patient_key  # noqa: E402
 
-SEED = 211
-VAL_FRACTION = 0.2
 CACHE = PROJECT / "approaches" / "2_symbolic" / "train_features.csv"
 
 
 def train_rows():
-    rows = [r for r in csv.DictReader(open(PROJECT / "data" / "image_index.csv")) if r["split"] == "train"]
-    assert rows and all(r["split"] == "train" for r in rows)  # guard: never touch the test set
+    rows = [r for r in csv.DictReader(open(PROJECT / "data" / "image_index.csv")) if r["split"] in ("train", "val")]
+    assert rows and all(r["split"] in ("train", "val") for r in rows)  # guard: never touch the test set
     return rows
 
 
 def build_cache():
     rows = train_rows()
-    keys = sorted({patient_key(Path(r["path"]).name) for r in rows})
-    random.Random(SEED).shuffle(keys)
-    val_keys = set(keys[: int(len(keys) * VAL_FRACTION)])
     out = []
     for r in rows:
         name = Path(r["path"]).name
         feats = symbolic.extract_features(PROJECT / r["path"])
         out.append({
             "Example ID": r["Example ID"],
-            "part": "val" if patient_key(name) in val_keys else "dev",
+            "part": r["split"],
             "label": 1 if "/PNEUMONIA/" in r["path"] else 0,
             "subtype": "bacteria" if "_bacteria_" in name else ("virus" if "_virus_" in name else "normal"),
             **feats,
@@ -69,7 +61,7 @@ def load_cache():
 if __name__ == "__main__":
     rows = load_cache() if CACHE.exists() and "--rebuild" not in sys.argv else build_cache()
     features = [k for k in rows[0] if k.startswith("lung")]
-    for part in ("dev", "val"):
+    for part in ("train", "val"):
         sub = [r for r in rows if r["part"] == part]
         pos = sum(r["label"] for r in sub)
         print(f"\n{part}: {len(sub)} images, {pos} pneumonia ({100 * pos / len(sub):.1f}%)")
