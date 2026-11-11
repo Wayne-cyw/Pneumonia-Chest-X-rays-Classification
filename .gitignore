@@ -11,3 +11,6 @@ __pycache__/
 
 # Raw dataset (download it yourself, see README)
 data/raw/
+
+# Jupyter
+.ipynb_checkpoints/

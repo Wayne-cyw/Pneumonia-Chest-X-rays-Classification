@@ -105,6 +105,14 @@ if __name__ == "__main__":
     report("Algorithm, human subset", truth, algo, subset_ids)
     report("Algorithm, full test set", truth, algo, test_ids)
 
+    dl_path = EVAL / "predictions" / "deep_learning_eval.csv"
+    if dl_path.exists():
+        dl = read_column(dl_path, "Example ID", "Deep Learning Prediction")
+        if set(dl) != set(truth):
+            sys.exit(f"ERROR: {dl_path.name} and ground_truth.csv list different IDs.")
+        report("Deep learning, human subset", truth, dl, subset_ids)
+        report("Deep learning, full test set", truth, dl, test_ids)
+
     disagree = [i for i in subset_ids if human[i] != algo[i]]
     both_right = sum(human[i] == algo[i] == truth[i] for i in subset_ids)
     only_human = sum(human[i] == truth[i] != algo[i] for i in subset_ids)
