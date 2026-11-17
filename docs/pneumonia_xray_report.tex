@@ -1,0 +1,145 @@
+\documentclass[11pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{wrapfig}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{soul}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\renewcommand{\arraystretch}{1.1}
+\sethlcolor{yellow}
+
+\titleformat{\section}{\bfseries\fontsize{12}{14}\selectfont}{}{0pt}{}
+\titlespacing*{\section}{0pt}{9pt}{3pt}
+
+% Tables: grid lines, 11pt text, left-aligned X columns.
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+\begin{document}
+\pagestyle{empty}
+
+{\bfseries\fontsize{15}{18}\selectfont Detecting Pneumonia in Chest X-rays}\par
+Wayne Chiu
+
+%---------------------------------------------------------------
+\section{1. Task, data, and motivation}
+
+\begin{wrapfigure}{r}{1.6in}
+  \vspace{-4pt}
+  \centering
+  \fbox{\includegraphics[width=1.5in]{ex_485.jpeg}}\\[2pt]
+  Example input (test image \texttt{ex\_485}). Expected output: NORMAL (Negative).
+  \vspace{-6pt}
+\end{wrapfigure}
+
+\textbf{Task.} Given one chest X-ray of a patient (a grayscale JPEG, with no age, history or file name), the system answers PNEUMONIA (Positive) or NORMAL (Negative).
+
+\textbf{Data.} I use the Kaggle dataset ``Chest X-Ray Images (Pneumonia)'' (Mooney, n.d.), which comes from Kermany et al.\ (2018). According to its data card, the images are anterior--posterior chest X-rays of patients aged one to five from Guangzhou Women and Children's Medical Center, taken during routine care. Low-quality scans were removed, two expert physicians graded each diagnosis, and a third expert also checked the evaluation set. My download has 5,216 training, 16 validation and 624 test images, 5,856 in total (the card says 5,863). The test set has 234 NORMAL and 390 PNEUMONIA images (62.5\% Positive), and the training set is 74.3\% Positive. Each pneumonia image is also bacterial (242 in the test set) or viral (148), but that shows only in the file name.
+
+\textbf{What makes it hard.} Image size, brightness and framing vary a lot (the example is $2517\times1979$ pixels). The Positive class mixes two kinds of infection, and the classes are imbalanced. All images come from one hospital and one age group, so results may not carry over elsewhere.
+
+\textbf{Why it matters.} Pneumonia caused 14\% of deaths in children under 5 in 2019 (World Health Organization, 2022). A tool that flags suspicious X-rays could help clinicians decide which ones to read first. It would assist a clinician, not replace one.
+
+%---------------------------------------------------------------
+\section{2. Evaluation setup}
+
+\textbf{Primary metric: F1, with PNEUMONIA as the positive class.} A model that always says PNEUMONIA already gets 62.5\% accuracy on the test set, so accuracy alone says little. Missing a pneumonia case is worse than a false alarm, so recall matters, but recall alone rewards answering PNEUMONIA every time. F1 balances recall against precision. F1 ignores true negatives, and always answering PNEUMONIA still gets an F1 of 0.77, so I also report specificity. The secondary metrics are recall and specificity (\texttt{eval.py} also prints accuracy, precision and balanced accuracy). The human and the algorithm are scored the same way.
+
+\begin{tabularx}{\textwidth}{|l|Y|r|r|Y|}
+\hline
+\textbf{Split} & \textbf{Source} & \textbf{Images} & \textbf{\% Pos.} & \textbf{Purpose} \\ \hline
+Test & dataset \texttt{test/} & 624 & 62.5 & Evaluation \\ \hline
+Human subset & random sample of test, seed 211 & 40 & 70.0 & Human vs.\ algorithm \\ \hline
+Train & 80\% of train, split by patient & 4,190 & 74.6 & Choose thresholds \\ \hline
+Validation & other 20\% of train (different patients) & 1,026 & 73.1 & Check thresholds \\ \hline
+\end{tabularx}
+
+The dataset's own 16-image validation folder is too small to tune on, so I did not use it.
+
+\textbf{Human subset.} I picked 40 test images at random (seed 211). The subset is 70.0\% Positive, against 62.5\% for the full test set. With $n = 40$, one image moves accuracy by 2.5 points, so subset scores are rough. The algorithm's own F1 is 0.711 on the subset and 0.763 on the full test set.
+
+%---------------------------------------------------------------
+\section{3. Methods completed}
+
+\textbf{Human baseline.} I labelled all 40 images myself. I have no radiology training, and the labelling tool had no timer. I saw the same image files the algorithm gets, renamed to their example ID (no file name, age, history or label) and scaled to fit a browser window. For each one I chose Positive or Negative; I wrote no notes. I had no ground truth and no other help, and my answers went into \texttt{human\_eval.csv}. The human and the algorithm answer the same question on the same IDs, so the comparison is like for like.
+
+\textbf{Algorithmic approach.} The algorithm is a hand-written rule with no training on labelled data. Edge and texture cues have been used on pediatric pneumonia before (Meenakshi et al., 2022; Wang et al., 2022). The pipeline and the reason for each choice:
+
+\begin{tabularx}{\textwidth}{|l|Y|Y|}
+\hline
+\textbf{Step} & \textbf{Choice} & \textbf{Reason} \\ \hline
+Normalise & Grayscale; crop black borders; resize to $256\times256$; stretch the 2nd--98th brightness percentiles to 0--1 & Cuts down differences in framing and exposure \\ \hline
+Region & Two fixed lung boxes (x: 15--42\% and 58--85\%, y: 27--74\% of the image) & Looks at the lungs, not the shoulders or abdomen \\ \hline
+Features & \textit{edges}: share of Canny edge pixels (Canny, 1986; OpenCV, n.d.; thresholds 40 and 100). \textit{detail}: standard deviation of the image minus a Gaussian blur ($\sigma = 8$). \textit{mean}: average brightness. & Hazy lungs should have fewer sharp edges, less fine detail and more brightness \\ \hline
+Thresholds & edges $<$ 0.24, detail $<$ 0.08 and mean $>$ 0.60 each vote Positive & Midpoint between the NORMAL and PNEUMONIA medians on Dev \\ \hline
+Decision & Positive if at least 2 of the 3 features vote Positive & Majority vote. Of 1, 2 or 3 required votes, 2 gave the best balanced accuracy on Dev and Check (0.82 on both) \\ \hline
+\end{tabularx}
+
+To rerun it you need Python 3.11.9, OpenCV 5.0.0.93 (\texttt{opencv-python-headless}; OpenCV, n.d.) and NumPy 2.4.6 (Harris et al., 2020). Inference is deterministic.
+
+%---------------------------------------------------------------
+\section{4. Preliminary results}
+
+\begin{tabularx}{\textwidth}{|l|C|C|C|Y|}
+\hline
+\textbf{Approach} & \textbf{F1, human subset ($n = 40$)} & \textbf{F1, full test ($n = 624$)} & \textbf{Recall / specificity, subset} & \textbf{Observations} \\ \hline
+Human baseline & 0.735 & n/a & 0.643 / 0.750 & 10 missed pneumonia, 3 false alarms \\ \hline
+Algorithm & 0.711 & 0.763 & 0.571 / 0.917 & Subset: 12 missed, 1 false alarm. Full test: recall 0.697, specificity 0.782 \\ \hline
+\end{tabularx}
+
+\texttt{eval.py} prints every value in this table.
+
+%---------------------------------------------------------------
+\section{5. Initial comparison}
+
+\textbf{Main result.} On the 40-image subset the human has a slightly higher F1 than the algorithm (0.735 vs.\ 0.711), but both get 27 of 40 images right (accuracy 0.675). They disagree on 20 images, and each is right on 10 of them, so this subset can't separate the two. The algorithm's F1 on the full test set (0.763) is a bit higher than on the subset, which isn't surprising with only 40 images.
+
+\textbf{Failure pattern.} On the full test set the algorithm makes 169 errors: 118 missed pneumonia cases (70\%) and 51 false alarms. It finds 67.4\% of the bacterial cases (163/242) and 73.6\% of the viral ones (109/148). The missed cases (79 bacterial, 39 viral; feature values from \texttt{symbolic.py} on the test images) mostly look normal to the rule. 99 of the 118 (84\%) have lung brightness at or below 0.60, and 41 get no Positive vote at all. Their median brightness is 0.562, close to the 0.530 of correctly cleared normals and far from the 0.668 of caught pneumonia. I also looked through 20 errors (12 missed, 8 false alarms, picked with seed 211), though I'm not a radiologist. Most of the missed cases have lungs as dark and finely textured as healthy ones, and the abnormal area is patchy or sits near the heart. The 51 false alarms are healthy children with bright, soft-looking lungs: 47 (92\%) are above the brightness threshold and 45 (88\%) are below the edge threshold. The data card says bacterial pneumonia is usually focal and viral pneumonia more diffuse. That would fit a whole-lung average missing small patches, but I haven't tested it.
+
+\textbf{Worked example.} The image above is NORMAL. It isn't in the human subset, so there is no human answer. The algorithm says Positive, a false alarm. All three features vote Positive: edges 0.215 ($<$ 0.24), detail 0.063 ($<$ 0.08) and mean brightness 0.667 ($>$ 0.60). To the rule, a bright, low-detail lung looks like haze, and it can't tell this from a healthy image with the same exposure. One image can't show how often that happens.
+
+\textbf{Limitation.} The data come from one hospital and one age group, and the rule relies on brightness and texture, so it may fail on other scanners. With $n = 40$, the gap between human and algorithm could easily flip.
+
+%---------------------------------------------------------------
+\section{6. Responsible use}
+
+\textbf{Explainability.} A clinician won't act on an X-ray result nobody can explain. The rule can say which features drove a prediction, as in the example above. A neural network can't do that directly. \\
+\textbf{Fairness.} Good overall scores can hide failures on a subgroup: recall is 0.674 on bacterial and 0.736 on viral pneumonia. Age, sex and scanner aren't in the data, so I can't check other groups. \\
+\textbf{Privacy.} These are medical images of children from routine hospital care. I used only the public release (CC BY 4.0). Its data card doesn't say how consent and de-identification were handled, and I haven't checked.
+
+%---------------------------------------------------------------
+\clearpage
+\section{References}
+
+\begin{list}{}{\setlength{\leftmargin}{18pt}\setlength{\itemindent}{-18pt}\setlength{\itemsep}{3pt}\setlength{\parsep}{0pt}\setlength{\topsep}{0pt}}
+\item Canny, J. (1986). A computational approach to edge detection. \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence, PAMI-8}(6), 679--698. \url{https://doi.org/10.1109/TPAMI.1986.4767851}
+
+\item Harris, C. R., Millman, K. J., van der Walt, S. J., Gommers, R., Virtanen, P., Cournapeau, D., Wieser, E., Taylor, J., Berg, S., Smith, N. J., Kern, R., Picus, M., Hoyer, S., van Kerkwijk, M. H., Brett, M., Haldane, A., del R\'{\i}o, J. F., Wiebe, M., Peterson, P., \ldots{} Oliphant, T. E. (2020). Array programming with NumPy. \textit{Nature, 585}(7825), 357--362. \url{https://doi.org/10.1038/s41586-020-2649-2}
+
+\item Kermany, D. S., Goldbaum, M., Cai, W., Valentim, C. C. S., Liang, H., Baxter, S. L., McKeown, A., Yang, G., Wu, X., Yan, F., Dong, J., Prasadha, M. K., Pei, J., Ting, M. Y. L., Zhu, J., Li, C., Hewett, S., Dong, J., Ziyar, I., \ldots{} Zhang, K. (2018). Identifying medical diagnoses and treatable diseases by image-based deep learning. \textit{Cell, 172}(5), 1122--1131.e9. \url{https://doi.org/10.1016/j.cell.2018.02.010}
+
+\item Meenakshi, P., Bhavana, K., \& Nair, A. K. (2022). Pneumonia detection using X-ray image analysis with image processing techniques. In \textit{2022 7th International Conference on Communication and Electronics Systems (ICCES)} (pp. 1657--1662). IEEE. \url{https://doi.org/10.1109/ICCES54183.2022.9835798}
+
+\item Mooney, P. (n.d.). \textit{Chest X-ray images (pneumonia)} [Data set]. Kaggle. Retrieved October 25, 2026, from \url{https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia}
+
+\item OpenCV. (n.d.). \textit{OpenCV: Canny edge detection} [Documentation]. Retrieved October 25, 2026, from \url{https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html}
+
+\item Wang, H.-N., Zheng, L.-X., Pan, S.-W., Yan, T., \& Su, Q.-L. (2022). Image recognition of pediatric pneumonia based on fusion of texture features and depth features. \textit{Computational and Mathematical Methods in Medicine, 2022}, Article 1973508. \url{https://doi.org/10.1155/2022/1973508}
+
+\item World Health Organization. (2022, November 11). \textit{Pneumonia in children} [Fact sheet]. \url{https://www.who.int/news-room/fact-sheets/detail/pneumonia}
+\end{list}
+
+\section{Generative AI use statement}
+
+I used claude for the following section in this report: symbolic approach, error analysis, formatting the latex file for this report and citations.
+
+\end{document}

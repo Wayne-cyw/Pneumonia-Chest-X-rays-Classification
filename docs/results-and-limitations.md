@@ -82,7 +82,7 @@ Source: [`approaches/3_deep_learning/results/test_metrics.csv`](../approaches/3_
 | Balanced accuracy | 0.740 | 0.702 to 0.775 |
 | MCC | 0.465 | 0.394 to 0.536 |
 
-Confusion counts: TP 272, FN 118, FP 51, TN 183. It misses 118 pneumonia cases; from the rule's own feature values, 99 of them have lung brightness at or below the 0.60 threshold and 41 get no pneumonia vote at all. Their median brightness (0.562) is close to that of correctly cleared normals (0.530) and far from that of caught pneumonia (0.668). Those figures come from the author's error analysis for the progress report (computed with `symbolic.py` on the test images). The training-data picture (the rule's three features, and the vote) is in the next figure:
+Confusion counts: TP 272, FN 118, FP 51, TN 183. It misses 118 pneumonia cases; from the rule's own feature values, 99 of them have lung brightness at or below the 0.60 threshold and 41 get no pneumonia vote at all. Their median brightness (0.562) is close to that of correctly cleared normals (0.530) and far from that of caught pneumonia (0.668). Those figures come from the author's error analysis in the written report in `docs/` (computed with `symbolic.py` on the test images). The training-data picture (the rule's three features, and the vote) is in the next figure:
 
 ![Symbolic features](../approaches/2_symbolic/figures/feature_distributions.png)
 
@@ -204,7 +204,7 @@ All of these use validation AUROC only. Differences under about 0.01 are inside 
 
 *Left: validation loss. Middle: validation AUROC. Right: train AUROC minus validation AUROC (the overfitting gap). The solid lines nearly coincide: retraining more of the network never opened a visible gap. The dashed grey scratch CNN is much noisier early on and needs many epochs to settle.*
 
-More capacity helped steadily but by only 0.008 in total, so the head-only model won the tie rule. This is the "capacity hyperparameter" the course asks for, and the result is that this task, with these images, does not need much capacity on the validation data. Whether that holds on the shifted test set is unknown.
+More capacity helped steadily but by only 0.008 in total, so the head-only model won the tie rule. This is the capacity setting of the design (how much of the pretrained network is retrained), and the result is that this task, with these images, does not need much capacity on the validation data. Whether that holds on the shifted test set is unknown.
 
 ### 8.2 Which backbone (stage 2, head only)
 
@@ -266,7 +266,7 @@ The advantage of pretraining is large with little data and vanishes at about 2,0
 | No augmentation | 0.9932 | yes; augmentation did not help on validation |
 | No class weighting | 0.9886 | yes; no effect on ranking |
 | + horizontal flip | 0.9882 | yes; no effect |
-| Frozen backbone (head only) | 0.9885 | **no: identical to the full recipe, which is already head-only** |
+| Frozen backbone (head only) | 0.9885 | **no: identical to the full recipe, which is already head-only** (the notebook now runs "All layers unfrozen" instead; pending re-run) |
 | No pretraining (random init) | 0.5000 | **no: a failed experiment**, see section 9 |
 
 ![Ablation](../approaches/3_deep_learning/figures/23_ablation.png)
@@ -280,7 +280,7 @@ The advantage of pretraining is large with little data and vanishes at about 2,0
 | EfficientNetV2B0 | 5.92 M | 24.7 MB | 12.6 | 48.7 |
 | ConvNeXtTiny | 27.82 M | 111.8 MB | 54.3 | 81.0 |
 
-The whole four-stage experiment took about 61 minutes on a Colab GPU (20.2 + 16.4 + 11.1 + 13.2 minutes). The single-image latency column in `results/cost_and_capacity.csv` is not used: it ranges up to 2.4 s and looks like warm-up overhead.
+The whole four-stage experiment took about 61 minutes on a Colab GPU (20.2 + 16.4 + 11.1 + 13.2 minutes). The single-image latency column in `results/cost_and_capacity.csv` is not used: it ranges up to 2.4 s and looks like warm-up overhead (the notebook's timing code has since been fixed, but the saved file was not regenerated).
 
 ![Cost and capacity](../approaches/3_deep_learning/figures/21_cost_and_capacity.png)
 
@@ -293,12 +293,10 @@ These are defects or weaknesses in the saved files, listed so nobody reads more 
 | # | Issue | Affects | Effect on the conclusions | Fix |
 |---|---|---|---|---|
 | 1 | The notebook was changed (commit `8df7a03`) so validation loss uses the same class weights as training loss and a train-vs-validation loss figure (`06b`) was added, **after** the saved outputs were produced. | Figures 06 and 07 loss panels; no `06b` figure yet | The weighted-versus-unweighted loss mismatch makes the training/validation loss gap look larger than it is. AUROC, recall, specificity and the test results are unaffected (loss weights do not change training). | Re-run the notebook on Colab (the test cell reloads the saved scores). |
-| 2 | "No pretraining" ablation scored exactly 0.500 AUROC. | Figure 23, `ablation.csv` | The recipe freezes the backbone, so random initialisation means a frozen random network producing a constant output. Not evidence about pretraining. | Repeat with the backbone unfrozen. |
-| 3 | "Frozen backbone (head only)" equals the full recipe. | Figure 23 | Duplicate row; the final recipe is already head-only. | Replace it with an "all layers unfrozen" row. |
-| 4 | `training_minutes_by_stage.csv` has a column named `seconds` whose values are minutes (stage 4 = 6.72 + 6.51 = 13.23, matching the long-run table). | Figure 21 right panel is correct because it labels minutes | Misleading column name only. | Rename the column. |
-| 5 | The single-image latency (up to 2.4 s) in `cost_and_capacity.csv` looks like warm-up overhead. | Cost table | Do not quote it. | Re-time after a warm-up call. |
-| 6 | The notebook introduction refers to `prepare_cache.py`; the script is `prepare_colab_bundle.py`. | Notebook text | None. | Edit the text. |
-| 7 | The model was saved with Keras 3.13.2 on Colab; a local environment used 3.15. | Loading `models/deep_learning_final.keras` locally | Not tested. | Load and predict a few images locally. |
+| 2 | "No pretraining" ablation scored exactly 0.500 AUROC. | Figure 23, `ablation.csv` | Not evidence about pretraining. Two causes together: BatchNorm layers were kept frozen (right for pretrained weights, wrong for random ones), and `keras.applications` BatchNorm uses momentum 0.999, so its running statistics need about 1,000 steps to settle. Frozen, or merely slow to adapt, they stay near their start-up values, the network outputs one constant, and AUROC is exactly 0.5 (reproduced, then fixed, in a small test: 0.5 to 0.93-0.98). | Fixed in the notebook: the variant now trains BatchNorm with momentum 0.9. **Needs a Colab re-run** to regenerate `ablation.csv` and figure 23. |
+| 3 | "Frozen backbone (head only)" equals the full recipe. | Figure 23 | Duplicate row; the final recipe is already head-only. | Fixed in the notebook: the row is now "All layers unfrozen". **Needs a Colab re-run** (same run as issue 2). |
+| 4 | The single-image latency (up to 2.4 s) in `cost_and_capacity.csv` looks like warm-up overhead. | Cost table | Do not quote it. | Timing code fixed in the notebook (warm-up before timing); the saved file still needs regenerating. |
+| 5 | The model was saved with Keras 3.13.2 on Colab; a local environment used 3.15. | Loading `models/deep_learning_final.keras` locally | None. | **Checked:** the file loads under Keras 3.15.1 and scores validation AUROC 0.9922 (recorded 0.9923); no test images were used. |
 
 ---
 
@@ -327,7 +325,7 @@ These are defects or weaknesses in the saved files, listed so nobody reads more 
 - **Staged search:** stages interact and were not checked jointly.
 - **Two seeds** is a small sample of run-to-run noise.
 
-**Responsible use.** This is a class project. A tool like this would assist a clinician, who reads the image too; it would not replace one. Its false-alarm rate on healthy children is high, its probabilities are over-confident, and it has not been tested outside one hospital.
+**Responsible use.** This is a demonstration project. A tool like this would assist a clinician, who reads the image too; it would not replace one. Its false-alarm rate on healthy children is high, its probabilities are over-confident, and it has not been tested outside one hospital.
 
 ---
 

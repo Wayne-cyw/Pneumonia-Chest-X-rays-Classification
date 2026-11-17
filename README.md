@@ -1,12 +1,14 @@
 # Detecting Pneumonia in Children's Chest X-rays: Four Ways to Build a Classifier
 
-A course project (CSC 211H5) that asks one question four different ways:
+A project that asks one question four different ways:
 
 > **Given one chest X-ray of a child, is it PNEUMONIA or NORMAL?**
 
 The same 624 test images are answered by **a person**, by **a hand-written rule**, by **a neural network**, and (planned) by **a large language model**. Every approach is scored by the same script with the same metrics, so the comparison is fair. The repository is as much about *why each design choice was made* as about the final numbers, so most sections link to the evidence behind a decision.
 
-**This is a learning project, not a medical device.** Nothing here should be used to make a clinical decision.
+**This is a demonstration project, not a medical device.** Nothing here should be used to make a clinical decision.
+
+An earlier written report covering the task, the evaluation setup, the human baseline and the symbolic rule (written before the deep learning approach was built) is in [`docs/pneumonia_xray_report.pdf`](docs/pneumonia_xray_report.pdf).
 
 ---
 
@@ -352,6 +354,8 @@ The full analysis, including the experiments that failed or turned out uninforma
 ├── docs/
 │   ├── design-decisions.md            every major choice: options, reasons, evidence
 │   ├── results-and-limitations.md     full analysis, failures, known issues
+│   ├── pneumonia_xray_report.pdf      earlier written report (task, evaluation, human baseline, symbolic rule)
+│   ├── pneumonia_xray_report.tex      its LaTeX source
 │   ├── make_overview_figures.py       redraws the two charts used above
 │   └── figures/                       approach_comparison.png, error_breakdown.png
 ├── data/
@@ -418,7 +422,7 @@ python eval/eval.py
 ### Deep learning (Google Colab)
 
 ```bash
-python approaches/3_deep_learning/prepare_colab_bundle.py     # builds local/colab_upload/pneumonia_project (about 290 MB)
+python approaches/3_deep_learning/prepare_colab_bundle.py     # builds a folder named pneumonia_project (about 290 MB; the script prints where)
 ```
 
 1. Upload that folder to Google Drive as `My Drive/pneumonia_project`.
@@ -446,6 +450,7 @@ python approaches/2_symbolic/plot_feature_distributions.py
 |---|---|
 | [`docs/design-decisions.md`](docs/design-decisions.md) | why each major choice was made, what else was possible, and the evidence |
 | [`docs/results-and-limitations.md`](docs/results-and-limitations.md) | the complete analysis, what failed, and what the results cannot show |
+| [`docs/pneumonia_xray_report.pdf`](docs/pneumonia_xray_report.pdf) | an earlier written report: task, evaluation setup, human baseline and symbolic rule, with references |
 | [`data/README.md`](data/README.md) | the dataset, the split and the checks |
 | [`approaches/1_human_baseline/README.md`](approaches/1_human_baseline/README.md) | how the human baseline was run |
 | [`approaches/2_symbolic/README.md`](approaches/2_symbolic/README.md) | how the rule works and how it was tuned |
@@ -460,10 +465,8 @@ python approaches/2_symbolic/plot_feature_distributions.py
 **Known issues in the saved outputs** (details and impact in [`docs/results-and-limitations.md`](docs/results-and-limitations.md#9-known-issues-in-the-saved-outputs)):
 
 - Figures 06 and 07 were made before the notebook was changed to weight the validation loss like the training loss. Their loss panels therefore exaggerate the train/validation gap. The notebook now also produces a figure `06b`, which is not in the saved outputs yet. A re-run on Colab is needed to refresh them.
-- The "No pretraining" ablation (figure 23) scored exactly 0.5 AUROC, which is a failed experiment (the backbone was frozen at random weights), not evidence about pretraining. The "Frozen backbone" row duplicates the full recipe. Both rows should be ignored until re-run.
-- `results/training_minutes_by_stage.csv` has a column called `seconds` whose values are minutes.
-- The inference-latency numbers in `results/cost_and_capacity.csv` look inflated by warm-up overhead; rely on model size, parameter count and seconds per epoch.
-- The notebook's introduction mentions a helper called `prepare_cache.py`; the script that exists is `prepare_colab_bundle.py`.
-- The earlier progress report was written before the one-split refactor, so its train/validation sizes (4,190 / 1,026) differ slightly from the repository's (4,185 / 1,047).
+- The "No pretraining" ablation (figure 23) scored exactly 0.5 AUROC, which is a failed experiment (a randomly initialised network whose BatchNorm statistics were frozen or too slow to adapt outputs a constant), not evidence about pretraining. The notebook has since been fixed (that variant now trains BatchNorm with a lower momentum) and the duplicate "Frozen backbone" row is replaced by "All layers unfrozen", but the saved outputs were not regenerated: ignore both rows until a Colab re-run.
+- The inference-latency numbers in `results/cost_and_capacity.csv` (single-image values up to 2.4 s) look inflated by warm-up overhead. The notebook's timing code now warms up first, but the saved file came from the older code; rely on model size, parameter count and seconds per epoch.
+- The written report in `docs/` was produced before the one-split refactor, so its train/validation sizes (4,190 / 1,026) differ slightly from the repository's (4,185 / 1,047).
 
-**Credits.** Dataset: Kermany, D. S. et al. (2018), *Identifying medical diagnoses and treatable diseases by image-based deep learning*, Cell 172(5); Kaggle release by Paul Mooney. Pretrained network: MobileNetV2 from `keras.applications` (ImageNet weights). Course: CSC 211H5.
+**Credits.** Dataset: Kermany, D. S. et al. (2018), *Identifying medical diagnoses and treatable diseases by image-based deep learning*, Cell 172(5); Kaggle release by Paul Mooney. Pretrained network: MobileNetV2 from `keras.applications` (ImageNet weights).

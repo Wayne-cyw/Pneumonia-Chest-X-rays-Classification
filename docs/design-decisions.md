@@ -29,7 +29,7 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 | B3 | Symbolic | Three features: edge density, fine detail, brightness |
 | B4 | Symbolic | Thresholds at the midpoint of the class medians |
 | B5 | Symbolic | Two of three votes decide |
-| C1 | Deep learning | Keras, as the course requires |
+| C1 | Deep learning | Keras, as the project specification requires |
 | C2 | Deep learning | Transfer learning from an ImageNet backbone |
 | C3 | Deep learning | Grayscale 224×224 input, cached as uint8, expanded to 3 channels inside the model |
 | C4 | Deep learning | One sigmoid output with binary cross-entropy |
@@ -55,7 +55,7 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 - **Alternatives.** Let each approach make its own split (the first version did this for the symbolic rule).
 - **Why.** The four approaches are only comparable if they are trained, tuned and scored on the same images. A per-approach split also invites accidents, such as an approach tuned on images another approach used as test.
 - **Evidence.** The refactor commit `b5cd937`; `data/prepare_data.py`. During the refactor the test IDs, `eval/ground_truth.csv` and the existing predictions were required to stay byte-identical, so earlier results stayed valid.
-- **Consequence / would change if.** Train/validation sizes changed slightly (4,190 / 1,026 before; 4,185 / 1,047 now), so the earlier progress report no longer matches the repository to the last digit.
+- **Consequence / would change if.** Train/validation sizes changed slightly (4,190 / 1,026 before; 4,185 / 1,047 now), so the earlier written report in `docs/` no longer matches the repository to the last digit.
 
 ### A2. Split by patient where a patient ID exists
 
@@ -121,7 +121,7 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 
 - **Decision.** The approach is a fixed procedure with three thresholds; no classifier is trained.
 - **Alternatives.** Train logistic regression or a random forest on the same measurements.
-- **Why.** The course defines this approach as hand-written logic, and a classifier fitted to labels belongs in the deep learning/machine learning approach. A rule is also fully explainable: for any image one can print which measurement voted which way.
+- **Why.** This approach is defined as hand-written logic, and a classifier fitted to labels belongs in the deep learning/machine learning approach. A rule is also fully explainable: for any image one can print which measurement voted which way.
 - **Evidence.** `approaches/2_symbolic/symbolic.py` (`votes_for` returns the reason for each answer).
 - **Consequence / would change if.** A fitted classifier on the same features would likely do a little better; the project deliberately does not.
 
@@ -131,7 +131,7 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 - **Alternatives.** Measure the whole image; segment the lungs automatically.
 - **Why.** Scans differ in framing and exposure; the stretch and crop remove much of that. Restricting to the lungs keeps shoulders, arms and the abdomen out of the measurement.
 - **Evidence.** `symbolic.py` (`normalize`, `LUNG_BOXES`).
-- **Consequence / would change if.** Fixed boxes cannot adapt to a child who is rotated or off-centre, and a whole-lung average misses small patchy pneumonia. The error analysis in the progress report found many missed cases of exactly that kind. Lung segmentation would address it.
+- **Consequence / would change if.** Fixed boxes cannot adapt to a child who is rotated or off-centre, and a whole-lung average misses small patchy pneumonia. The error analysis in the written report in `docs/` found many missed cases of exactly that kind. Lung segmentation would address it.
 
 ### B3. Three features: edge density, fine detail, brightness
 
@@ -183,15 +183,15 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 
 - **Decision.** The training and inference code is Python with Keras on a TensorFlow backend.
 - **Alternatives.** PyTorch.
-- **Why.** The course lab handout requires Keras; PyTorch is allowed only with TA approval.
+- **Why.** The project specification requires Keras; PyTorch was out of scope.
 - **Evidence.** The notebook header; run info `results/run_info.json` (TensorFlow 2.21.0, Keras 3.13.2).
-- **Consequence / would change if.** A TA-approved switch would be a moderate rewrite.
+- **Consequence / would change if.** A switch to PyTorch would be a moderate rewrite.
 
 ### C2. Transfer learning from an ImageNet backbone
 
 - **Decision.** Use a pretrained network from `keras.applications` and adapt it.
 - **Alternatives.** Train a network from scratch.
-- **Why.** About 4,000 training images are too few to learn good image features from nothing, and the course asks for transfer learning whenever a pretrained model exists.
+- **Why.** About 4,000 training images are too few to learn good image features from nothing, and transfer learning is the standard choice when a pretrained model exists.
 - **Evidence.** The learning curve (`results/learning_curve.csv`, figure 22): at 10% of the training data pretrained reaches validation AUROC 0.969 against 0.737 for a scratch CNN; at 25% 0.982 against 0.946.
 - **Consequence / would change if.** At 50% and 100% of the data the scratch CNN matches or beats the pretrained model on validation (0.9905 against 0.9885 at 100%). So the benefit here is data efficiency, not final accuracy. ImageNet contains photographs, not X-rays, which is a limitation to state.
 
@@ -207,9 +207,9 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 
 - **Decision.** The head is `Dropout, Dense(1, sigmoid)` with binary cross-entropy loss.
 - **Alternatives.** A 2-unit softmax with categorical loss.
-- **Why.** They are mathematically equivalent for two classes. A single sigmoid gives one number, P(pneumonia), which is exactly what the predictions file, the AUROC and the threshold need. The course's two-class recipe lists this layout.
+- **Why.** They are mathematically equivalent for two classes. A single sigmoid gives one number, P(pneumonia), which is exactly what the predictions file, the AUROC and the threshold need. It is the standard two-class layout.
 - **Evidence.** Notebook section 2.
-- **Consequence / would change if.** A TA preferring softmax would be a small change.
+- **Consequence / would change if.** Switching to a 2-unit softmax head would be a small change.
 
 ### C5. Class weights for the imbalance
 
@@ -239,14 +239,14 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 - **Decision.** Each stage fixes one decision and passes the winner on: (1) how much of the backbone to unfreeze, (2) which backbone, (3) learning rate, weight decay, dropout and augmentation by random search, (4) a long run.
 - **Alternatives.** A full grid over everything (hundreds of runs).
 - **Why.** A grid would need hundreds of runs; random search covers more values of every setting for the same budget, and the staged design keeps each result interpretable.
-- **Evidence.** `results/stage1_capacity.csv`, `stage2_backbones.csv`, `stage3_random_search.csv`; `results/training_minutes_by_stage.csv` (about 61 minutes in total; the column is mislabelled `seconds`).
+- **Evidence.** `results/stage1_capacity.csv`, `stage2_backbones.csv`, `stage3_random_search.csv`; `results/training_minutes_by_stage.csv` (about 61 minutes in total).
 - **Consequence / would change if.** Stages interact (the best learning rate may depend on the backbone), and a staged search can miss that.
 
 ### C9. Choose by validation AUROC; ties within 0.01 go to the simpler model
 
 - **Decision.** Candidates are ranked by validation AUROC. Because validation has about 1,000 images, differences below 0.01 are treated as noise and the smaller or more frozen model wins.
 - **Alternatives.** Always take the highest score; rank by F1 at a fixed threshold.
-- **Why.** AUROC does not depend on a threshold, so it is a fair way to compare models before a threshold exists. The tolerance stops tuning noise from picking a bigger model; the lab handout gives the same advice.
+- **Why.** AUROC does not depend on a threshold, so it is a fair way to compare models before a threshold exists. The tolerance stops tuning noise from picking a bigger model; this is common advice for small validation sets.
 - **Evidence.** The three tuning tables:
 
 | Stage | Option | Validation AUROC |
@@ -283,7 +283,7 @@ All file paths are relative to the repository root. Numbers marked "val" are val
 
 - **Decision.** A four-block CNN (98,292 parameters, 0.49 MB) trained from scratch appears in the capacity, learning-curve and cost figures. It is never a candidate model and never touched the test set.
 - **Alternatives.** Leave it out; make it a candidate.
-- **Why.** It shows what pretraining buys and gives a lower bound on size and speed. The course wants TA approval before a scratch model becomes a real candidate.
+- **Why.** It shows what pretraining buys and gives a lower bound on size and speed. The project's design is transfer learning, so a from-scratch model is kept as a reference only.
 - **Evidence.** `results/cost_and_capacity.csv`: val AUROC 0.9927 at about 5 ms per image (batched), higher than the three head-only pretrained backbones in that table, though lower than the fine-tuned EfficientNetV2B0 runs of stage 1 (up to 0.9992).
 - **Consequence / would change if.** Because it was never run on the test set, I cannot say whether it would have generalised better or worse than the pretrained model, given the validation/test shift.
 
@@ -312,8 +312,8 @@ These are recorded because understanding why something failed is part of the pro
 | Decision | What happened | What it taught |
 |---|---|---|
 | Threshold from validation (C11) | Test specificity 0.709 instead of about 0.97 | Tuning on data from the same pool as training gives optimistic operating points; the test folder is different. |
-| "No pretraining" ablation | Validation AUROC exactly 0.500 | The recipe freezes the backbone, so "no pretraining" meant a frozen random backbone with a constant output. The ablation was badly designed (it should unfreeze the network); ignore that row. |
-| "Frozen backbone" ablation | Identical to the full recipe (0.9885) | The final recipe is already head-only, so this row is a duplicate. |
+| "No pretraining" ablation | Validation AUROC exactly 0.500 | BatchNorm stayed frozen at its start-up statistics, and even when trained its momentum of 0.999 averages over about 1,000 steps, far more than a short run provides. The network output one constant. The notebook now trains BatchNorm with momentum 0.9 for that variant, but the saved results were not regenerated; ignore that row until a Colab re-run. |
+| "Frozen backbone" ablation | Identical to the full recipe (0.9885) | The final recipe is already head-only, so this row was a duplicate. The notebook now runs "All layers unfrozen" instead; pending a Colab re-run. |
 | Train versus validation loss figures | Loss panels exaggerate the overfitting gap | Training loss was class-weighted but validation loss was not. The notebook now weights both; the saved figures 06 and 07 pre-date that fix. |
-| Cost timings | Single-image latency of 2.4 s for ConvNeXtTiny | Almost certainly warm-up overhead; only batch timings and sizes are trusted. |
+| Cost timings | Single-image latency of 2.4 s for ConvNeXtTiny | Almost certainly warm-up overhead. The notebook's timing code now warms up first, but the saved file is from the older code; only batch timings and sizes are trusted. |
 | Pretrained beats scratch | It does not at full data | The honest claim is "data-efficient", not "more accurate". |
