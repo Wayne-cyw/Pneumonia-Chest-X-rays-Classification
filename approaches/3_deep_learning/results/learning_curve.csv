@@ -1,0 +1,9 @@
+model,frac,n_images,val_auroc
+Pretrained + fine-tuned (final recipe),0.1,398,0.968618631362915
+Scratch CNN (reference),0.1,398,0.7373039722442627
+Pretrained + fine-tuned (final recipe),0.25,1013,0.9817555546760559
+Scratch CNN (reference),0.25,1013,0.9458625316619873
+Pretrained + fine-tuned (final recipe),0.5,2085,0.9868177175521851
+Scratch CNN (reference),0.5,2085,0.9872300624847412
+Pretrained + fine-tuned (final recipe),1.0,4185,0.9884837865829468
+Scratch CNN (reference),1.0,4185,0.9905166625976562

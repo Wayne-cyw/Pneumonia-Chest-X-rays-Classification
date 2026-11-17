@@ -1,0 +1,14 @@
+{
+  "backbone": "MobileNetV2",
+  "pretrained": true,
+  "unfreeze": 0.0,
+  "lr": 9.126897179876363e-05,
+  "wd": 0.0009185867981928643,
+  "dropout": 0.0,
+  "aug": "mild",
+  "hflip": false,
+  "class_weight": true,
+  "head_epochs": 3,
+  "epochs": 40,
+  "patience": null
+}

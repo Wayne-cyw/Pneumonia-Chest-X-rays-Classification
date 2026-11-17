@@ -1,0 +1,27 @@
+{
+  "profile": "standard",
+  "device": "/physical_device:GPU:0",
+  "tensorflow": "2.21.0",
+  "keras": "3.13.2",
+  "seed": 211,
+  "image_size": 224,
+  "threshold": 0.7378690838813782,
+  "threshold_rule": "Youden's J on validation",
+  "final_config": {
+    "backbone": "MobileNetV2",
+    "pretrained": true,
+    "unfreeze": 0.0,
+    "lr": 9.126897179876363e-05,
+    "wd": 0.0009185867981928643,
+    "dropout": 0.0,
+    "aug": "mild",
+    "hflip": false,
+    "class_weight": true,
+    "head_epochs": 3,
+    "epochs": 40,
+    "patience": null
+  },
+  "final_seed": 212,
+  "final_best_epoch": 35,
+  "total_epochs_final_run": 43
+}

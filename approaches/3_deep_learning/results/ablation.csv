@@ -1,0 +1,7 @@
+variant,val_auroc
+Full recipe,0.9884837865829468
+No pretraining (random init),0.5
+No augmentation,0.993202805519104
+No class weighting,0.9886124730110168
++ Horizontal flip,0.988216757774353
+Frozen backbone (head only),0.9884837865829468
